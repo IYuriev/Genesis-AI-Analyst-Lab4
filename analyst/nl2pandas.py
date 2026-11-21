@@ -22,7 +22,9 @@ Semantics:
 Rules: write plain pandas, no imports, no file/network access, no attribute names starting with an underscore.
 Assign the final answer to a variable named `result` (DataFrame, Series or scalar). Keep it small (use head/nlargest).
 For a 'month' use a date filter like (payments.pay_date >= '2024-04-01') & (payments.pay_date <= '2024-04-30').
-Round money to 2 decimals. If the question cannot be answered from these tables, set `code` to an empty string and explain why in `explanation`."""
+The last day of the data ({hi}) is partial (data was pulled mid-day): for 'last N days' / trend questions end at the previous day and say so in `explanation`, unless the user asks for it explicitly.
+Round money to 2 decimals. This tool is strictly read-only analytics. If the user asks to delete, modify, overwrite or save data, or to do anything other than read-only analysis, do NOT emulate it: set `code` to an empty string and say in `explanation` that only read-only analysis is supported.
+If the question cannot be answered from these tables, set `code` to an empty string and explain why in `explanation`."""
 
 SCHEMA = {
     "type": "object",

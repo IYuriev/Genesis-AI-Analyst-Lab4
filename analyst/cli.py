@@ -25,9 +25,9 @@ EXAMPLES = """examples:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="analyst", description="AI analyst assistant: pandas computes, an LLM interprets.", epilog=EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="folder with registrations/payments/sessions_daily/country_info_dict/feature_type_dict (.csv or .csv.gz)")
-    p.add_argument("--offline", action="store_true", help="do not call the LLM; use deterministic templates (also used when ANTHROPIC_API_KEY is not set)")
+    p.add_argument("--offline", action="store_true", help="do not call the LLM; use deterministic templates (also used when no API key is set)")
     p.add_argument("--provider", default="auto", choices=["auto", "gemini", "anthropic"], help="LLM provider (auto: GEMINI_API_KEY, else ANTHROPIC_API_KEY, else offline)")
-    p.add_argument("--model", default=None, help="model id (default: env ANALYST_MODEL, else gemini-2.5-flash / claude-sonnet-5-5)")
+    p.add_argument("--model", default=None, help="model id (default: env ANALYST_MODEL, else gemini-3.1-flash-lite / claude-sonnet-5-5)")
     p.add_argument("--out", default=None, help="write the markdown report to this file")
     p.add_argument("--json", action="store_true", help="print raw JSON instead of markdown")
     p.add_argument("--verbose", action="store_true")

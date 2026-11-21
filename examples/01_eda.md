@@ -1,22 +1,20 @@
 # Automatic EDA
 
-_mode: offline_
+_mode: llm:gemini/gemini-3.5-flash_
 
 ## Summary
-[offline template] 202382 users, 7781 payers, revenue $93,749.58, window 2024-04-05..2024-05-11.
+This dataset tracks 202,382 users, 547,860 session records, and 11,330 payment transactions totaling $93,749.58 USD between 2024-04-05 and 2024-05-11. Data quality is structurally strong with zero missing values across critical fields, though 62,589 users registered before the event window and the final day (2024-05-11) is incomplete.
 
 ## Findings
-- mobile web is the dominant platform (93.3% of users).
-- Highest payer conversion in the window: android (14.65%).
-- Top 1% of payers bring 6.2% of revenue.
-- Anomaly: new_users on 2024-04-20 changed 65.7% vs the previous day.
-- Anomaly: active_users on 2024-04-19 changed 1191.1% vs the previous day.
-- Anomaly: active_users on 2024-04-20 changed 33.6% vs the previous day.
+- While mobile web dominates top-of-funnel traffic with 93.3% of users, android and desktop yield vastly superior conversion rates at 14.65% and 9.75% respectively, compared to mobile web's 4.64%.
+- Revenue in the payments table is driven primarily by the premium feature ($74,138.27 USD, 84.0% of transactions) over the vip feature ($19,611.31 USD, 16.0% of transactions), yielding an average check of $8.27 USD.
+- Geographic representation shifts between user acquisition and monetization: USA leads user share at 15.7% (vs Ukraine at 12.6%), but Ukraine dominates payment share at 28.6% (vs USA at 16.1%).
+- Anomalous engagement spikes occurred on 2024-04-19 when active users grew by 1,191.1% (from 1,802.0 to 23,265.0) and on 2024-04-20 when new users rose by 65.7% (from 2,767.0 to 4,586.0).
 
 ## Data quality
-- users registered before the event window: 62589 (event tables cover 2024-04-05..2024-05-11, but registrations go back to 2013-04-05; metrics like 'new users' must use reg_date inside the window)
-- last day is partial: 1 (2024-05-11 has far fewer events than the day before; excluded from trend comparisons)
-- app = 'unknown': 3 (unclassified platform values)
+- The users table contains 62,589 historical registrations dating back to 2013-04-05 outside the 2024-04-05 to 2024-05-11 event window, requiring strict filtering on reg_date for cohort analyses.
+- The final window day 2024-05-11 is a partial day and must be excluded from daily time-series and trend calculations to prevent downward metric skew.
+- User-level aggregated spend in users.revenue_usd reaches a max of $1,223.97 USD despite payments.amount_usd having a single-transaction max of $19.99 USD, reflecting heavy tail spending distributions.
 
 ## Anomalies (programmatic, median/MAD on day-over-day change)
 - new_users on 2024-04-20: 4586.0 (prev day 2767.0, 65.7%)
@@ -77,7 +75,8 @@ _mode: offline_
 ```
 
 ## Next steps
-- Run `hypotheses` to get testable explanations.
-- Run `explain` on the days flagged as anomalies.
+- Analyze android channel acquisition sources to determine why conversion (14.65%) is high while app distribution share (0.6%) remains extremely low.
+- Segment the 2024-04-19 active user anomaly (23,265.0 users vs 1,802.0 prior day) by sessions.country and sessions.app to isolate the traffic source.
+- Evaluate user retention and average check ($8.27 USD) differences between premium feature buyers ($74,138.27 USD total) and vip feature buyers ($19,611.31 USD total).
 
 > Guardrail: every number in the AI text was traced to computed facts.

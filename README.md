@@ -23,7 +23,7 @@ pip install -r requirements.txt
 export GEMINI_API_KEY=...      # free key: https://aistudio.google.com -> "Get API key" (no card needed)
 ```
 
-Provider selection (`--provider auto`): `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) -> Gemini, otherwise `ANTHROPIC_API_KEY` -> Claude (`pip install anthropic`), otherwise offline. Default model `gemini-2.5-flash`; change with `--model` or `ANALYST_MODEL`. The Gemini calls use plain HTTPS (no extra package) and retry on rate limits of the free tier.
+Provider selection (`--provider auto`): `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) -> Gemini, otherwise `ANTHROPIC_API_KEY` -> Claude (`pip install anthropic`), otherwise offline. Default model `gemini-3.1-flash-lite` (automatic fallback to `gemini-3.5-flash` / `gemini-flash-latest` on 404, 429 or 503); change with `--model` or `ANALYST_MODEL`. The Gemini calls use plain HTTPS (no extra package) and retry on rate limits of the free tier.
 
 Without a key (or with `--offline`) the tool still runs with deterministic templates, so the whole pipeline can be tried and tested; free-form `ask` questions need an LLM.
 
@@ -41,18 +41,19 @@ python -m analyst --out report.md eda        # save markdown; --json prints raw 
 
 Metrics for `explain`: `revenue`, `payers`, `avg_check`, `new_users`, `active_users`, `sessions`.
 
-## Example (offline mode, no LLM)
+## Example (live model, Gemini)
 
 ```
-$ python -m analyst --offline ask "Show top-5 countries by revenue in April"
-result = payments[(payments.pay_date >= '2024-04-01') & (payments.pay_date < '2024-05-01')].groupby('country')['amount_usd'].sum().round(2).nlargest(5)
+$ python -m analyst ask "Which 5 countries have the highest average check among countries with at least 100 payments?"
+grouped = payments.groupby('country').agg(avg_check=('amount_usd', 'mean'), pay_count=('amount_usd', 'count'))
+result = grouped[grouped['pay_count'] >= 100].nlargest(5, 'avg_check')[['avg_check']].round(2)
 
-Ukraine 13490.60 | USA 11695.41 | South Africa 3434.45 | Chile 3218.89 | Spain 2458.52
+Germany 10.80 | Netherlands, Kingdom of the 10.62 | USA 10.48 | Poland 9.87 | Spain 8.73
 ```
 
-More saved outputs in `examples/` (EDA, hypotheses, ask, explain, summary, retention). They were generated **offline**, so the interpretation texts are template text; the numbers and tables are the real computed ones. Outputs with the live model are produced by running the same commands with `ANTHROPIC_API_KEY` set.
+Full outputs of every function on the real dataset are in `examples/` (EDA, hypotheses, six `ask` questions including a destructive and an unanswerable one, two `explain` runs, summary, retention) and screenshots with explanations are in `docs/screenshots.md`.
 
-What the tool finds in this data (computed numbers): active users jump from 1,802 to 23,265 on 2024-04-19 (most likely a tracking change, flagged by the anomaly detector), D7 retention differs by platform (ios 4.82%, desktop 14.87%), payer conversion is 14.65% on android vs 4.43% on ios, 62,589 registrations are older than the event window.
+What the tool finds in this data (computed numbers): active users jump from 1,802 to 23,265 on 2024-04-19 (most likely a tracking change, flagged by the anomaly detector), D7 retention differs by platform (ios 4.82%, desktop 14.87%), payer conversion is 14.65% on android vs 4.43% on ios, 62,589 registrations are older than the event window, the `unknown` platform has 54 sessions per active user (bots or a logging error?).
 
 ## Reliability
 

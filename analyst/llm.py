@@ -13,12 +13,16 @@ from __future__ import annotations
 
 import json
 import os
+import socket
+import sys
 import time
 import urllib.error
 import urllib.request
 from typing import Any, Callable, Dict, Optional
 
-DEFAULT_MODELS = {"gemini": "gemini-2.5-flash", "anthropic": "claude-sonnet-5-5"}
+DEFAULT_MODELS = {"gemini": "gemini-3.1-flash-lite", "anthropic": "claude-sonnet-5-5"}
+# used only when the user did not pick a model: if the default is retired (404), overloaded (503) or over its free-tier quota (429) try the next one
+GEMINI_FALLBACKS = ["gemini-3.5-flash", "gemini-flash-latest"]
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 
 
@@ -46,6 +50,7 @@ class LLM:
         self.provider = "offline"
         self.mode = "offline"
         self.model = model
+        self.user_model = bool(model or os.environ.get("ANALYST_MODEL"))
         if offline:
             return
         if provider == "auto":
@@ -85,16 +90,17 @@ class LLM:
         for attempt in range(4):
             req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json", "x-goog-api-key": _gemini_key() or ""})
             try:
-                with urllib.request.urlopen(req, timeout=120) as r:
+                with urllib.request.urlopen(req, timeout=180) as r:
                     return json.loads(r.read().decode("utf-8"))
             except urllib.error.HTTPError as e:
                 detail = e.read().decode("utf-8", "replace")[:400]
                 last = "HTTP %s: %s" % (e.code, detail)
-                if e.code in (429, 500, 502, 503, 504) and attempt < 3:
+                daily = e.code == 429 and "per day" in detail.lower()  # daily quota: waiting seconds will not help
+                if e.code in (429, 500, 502, 503, 504) and attempt < 3 and not daily:
                     time.sleep(5 * (attempt + 1))
                     continue
                 raise LLMError("Gemini API error - %s" % last)
-            except urllib.error.URLError as e:
+            except (urllib.error.URLError, socket.timeout, TimeoutError) as e:
                 last = str(e)
                 if attempt < 3:
                     time.sleep(3)
@@ -102,18 +108,37 @@ class LLM:
                 raise LLMError("Gemini API is unreachable: %s" % last)
         raise LLMError("Gemini API failed: %s" % last)
 
+    def _post_with_fallback(self, body: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            return self._post_gemini(body)
+        except LLMError as first:
+            if self.user_model:
+                raise
+            for alt in GEMINI_FALLBACKS:
+                if alt == self.model:
+                    continue
+                reason = " ".join(str(first).split())[:70]
+                print("[warn] %s failed (%s...); trying %s" % (self.model, reason, alt), file=sys.stderr, flush=True)
+                self.model = alt
+                self.mode = "llm:gemini/" + alt
+                try:
+                    return self._post_gemini(body)
+                except LLMError:
+                    continue
+            raise first
+
     def _structured_gemini(self, system: str, user: str, schema: Dict[str, Any], max_tokens: int) -> Dict[str, Any]:
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": [{"text": user}]}],
             "generationConfig": {
                 "temperature": 0,
-                "maxOutputTokens": max_tokens,
+                "maxOutputTokens": max(max_tokens, 16000),  # newer Gemini models also spend output tokens on thinking
                 "responseMimeType": "application/json",
                 "responseSchema": to_gemini_schema(schema),
             },
         }
-        resp = self._post_gemini(body)
+        resp = self._post_with_fallback(body)
         try:
             cand = resp["candidates"][0]
             text = "".join(p.get("text", "") for p in cand["content"]["parts"])

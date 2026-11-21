@@ -14,7 +14,8 @@ SYSTEM = (
     "You write a short executive summary for a non-technical stakeholder (CEO/product lead) from computed KPIs. "
     "Structure: what happened, why it matters, what to do next. Rules: only numbers from the input, copied exactly; "
     "no jargon; say which numbers are unreliable (see `caveats`); every action must be tied to a number from the input; "
-    "max ~150 words in total."
+    "max ~150 words in total; say 'fell by 4.8%' instead of 'fell by -4.8%'; actions must start with a verb like "
+    "'Investigate' or 'Check' and must not name causes (checkout bugs, campaigns...) that are not in the input."
 )
 SCHEMA = {
     "type": "object",

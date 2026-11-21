@@ -17,7 +17,8 @@ SYSTEM = (
     "in `evidence` and quote the concrete numbers from that fact; (2) never use a number that is not in the facts; "
     "(3) a hypothesis is a causal or segment claim that can be tested, not a restatement of a fact; "
     "(4) `how_to_test` names the exact cut/experiment/metric; (5) mark clearly when data cannot confirm a cause "
-    "(e.g. a tracking change vs a real behaviour change)."
+    "(e.g. a tracking change vs a real behaviour change); (6) phrase every cause as a possibility ('may', 'could', 'possibly'), "
+    "never as an established fact, and do not use 'because' / 'caused' / 'drove' for causes the data cannot prove."
 )
 
 SCHEMA = {
