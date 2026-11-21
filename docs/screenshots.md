@@ -15,11 +15,11 @@ Every hypothesis cites fact ids (F1..F9) and quotes their numbers; the line `gua
 The generated code is shown, validated and executed; the result is a real table.
 
 ## 4. Explain a metric change - `python -m analyst explain ...`
-![explain](img/04_explain.png)
+Full output of this run: [examples/04_explain_active_users.md](../examples/04_explain_active_users.md).
 The decomposition by app, country and feature is exact (contributions sum to the total change); the model names the drivers and proposes a hypothesis with a check.
 
 ## 5. Executive summary - `python -m analyst summary`
-![summary](img/05_summary.png)
+Full output of this run: [examples/05_summary.md](../examples/05_summary.md).
 
 ## 6. A destructive request is refused - `python -m analyst ask "Delete all rows ..."`
 ![refusal](img/06_ask_refusal.png)
