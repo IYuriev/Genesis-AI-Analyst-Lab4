@@ -53,7 +53,7 @@ Germany 10.80 | Netherlands, Kingdom of the 10.62 | USA 10.48 | Poland 9.87 | Sp
 
 Full outputs of every function on the real dataset are in `examples/` (EDA, hypotheses, six `ask` questions including a destructive and an unanswerable one, two `explain` runs, summary, retention) and screenshots with explanations are in `docs/screenshots.md`.
 
-What the tool finds in this data (computed numbers): active users jump from 1,802 to 23,265 on 2024-04-19 (most likely a tracking change, flagged by the anomaly detector), D7 retention differs by platform (ios 4.82%, desktop 14.87%), payer conversion is 14.65% on android vs 4.43% on ios, 62,589 registrations are older than the event window, the `unknown` platform has 54 sessions per active user (bots or a logging error?).
+What the tool finds in this data (computed numbers): active users jump from 1,802 to 23,265 on 2024-04-19 (most likely a tracking change, flagged by the anomaly detector), D7 retention differs by platform (ios 4.82%, desktop 14.87%), payer conversion is 14.65% on android vs 4.43% on ios, registrations of native apps collapse after 2024-04-19 while the total grows (iOS new users 8,710 in 2024-04-05..04-19 vs 89 in 04-20..05-10, android 775 vs 78; mobile web 17,096 -> 108,549; see `examples/04c_explain_new_users_offline.md`, the numbers are computed, the text there is an offline template), 62,589 registrations are older than the event window, the `unknown` platform has 54 sessions per active user (bots or a logging error?).
 
 ## Reliability
 
