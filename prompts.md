@@ -5,7 +5,7 @@ All prompts live in the module of the feature they belong to (`SYSTEM` constants
 ## Shared design (applies to all features)
 
 1. **The LLM never calculates.** pandas computes every number (`metrics.py`, `eda.py`, `hypotheses.py`...). The model receives a JSON of computed facts and only writes interpretation. Reason: LLMs state invented numbers with confidence (the lab text warns about this), so numbers must come from code.
-2. **Structured output through tool use.** Each call forces a tool (`tool_choice = {"type": "tool", ...}`) with a JSON Schema, `temperature = 0`. Reason: parsing JSON from a tool call is simpler and more reliable than extracting numbers from free text.
+2. **Structured output.** Each call returns JSON that conforms to a schema: Gemini JSON mode (`responseMimeType: application/json` + `responseSchema`) or a forced Claude tool call; `temperature = 0`. Reason: parsing JSON is simpler and more reliable than extracting numbers from free text.
 3. **Guardrail after every answer** (`guardrails.py`). All numbers in the model text are extracted and traced back to the supplied facts (exact, rounded, as % or in thousands). Dates, durations ("14 days") and fact ids are ignored. Untraceable numbers are listed under the report as a warning. For hypotheses the numbers must be found in the *cited* facts.
 4. **Schema contains the structure we want to read**, e.g. `evidence` (fact ids) for every hypothesis, `confidence` for explanations. This forces the model to ground claims and to admit uncertainty.
 5. **Offline fallback.** If there is no API key the same pipeline runs with deterministic templates (used by tests and for demos without a key).

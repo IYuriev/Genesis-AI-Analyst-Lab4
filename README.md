@@ -1,6 +1,6 @@
 # AI Analyst Assistant (Lab 4)
 
-A command line tool that helps a product analyst work faster with data. **pandas computes every number; an LLM (Anthropic Claude) only interprets them**, and a guardrail checks that no number in the AI text is invented.
+A command line tool that helps a product analyst work faster with data. **pandas computes every number; an LLM (Google Gemini by default, Anthropic Claude optional) only interprets them**, and a guardrail checks that no number in the AI text is invented.
 
 Dataset: mobile-app product analytics from lab 3 (Tableau): 202,382 registrations, 11,330 payments, 547,860 user-day session rows, 196 countries, 5 platforms, period 2024-04-05..2024-05-11. The files are in `data/` (gzipped CSV).
 
@@ -20,10 +20,12 @@ Dataset: mobile-app product analytics from lab 3 (Tableau): 202,382 registration
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-export ANTHROPIC_API_KEY=sk-ant-...      # key: https://console.anthropic.com -> API Keys
+export GEMINI_API_KEY=...      # free key: https://aistudio.google.com -> "Get API key" (no card needed)
 ```
 
-Without a key (or with `--offline`) the tool still runs with deterministic templates, so the whole pipeline can be tried and tested; free-form `ask` questions need the key. Model: `claude-sonnet-5-5`, change with `--model` or `ANALYST_MODEL`.
+Provider selection (`--provider auto`): `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) -> Gemini, otherwise `ANTHROPIC_API_KEY` -> Claude (`pip install anthropic`), otherwise offline. Default model `gemini-2.5-flash`; change with `--model` or `ANALYST_MODEL`. The Gemini calls use plain HTTPS (no extra package) and retry on rate limits of the free tier.
+
+Without a key (or with `--offline`) the tool still runs with deterministic templates, so the whole pipeline can be tried and tested; free-form `ask` questions need an LLM.
 
 ## Usage
 
@@ -54,7 +56,7 @@ What the tool finds in this data (computed numbers): active users jump from 1,80
 
 ## Reliability
 
-- The LLM gets only computed facts and returns structured output (tool use, `temperature=0`).
+- The LLM gets only computed facts and returns structured output (Gemini JSON mode with `responseSchema`, or a forced Claude tool call; `temperature=0`).
 - `guardrails.py` traces every number of the AI text back to the facts; untraceable numbers are printed as a warning under the report.
 - Generated pandas code is shown to the user and validated before execution (no imports, no I/O, no private attributes; restricted builtins; tables are copied).
 - Known limits: the offline mode understands only a few question patterns; the number tracing is heuristic (e.g. a correct number derived by the model from two facts is flagged); the decomposition shows where a change happened, not why; the dataset has no acquisition source or event-level funnel, so hypotheses about channels cannot be confirmed.
@@ -65,8 +67,8 @@ What the tool finds in this data (computed numbers): active users jump from 1,80
 python -m unittest discover -s tests -v
 ```
 
-18 offline tests: control numbers equal to the lab 3 dashboard (139,793 new users, 196,318 active, 7,781 payers, $93,749.58 revenue, Germany $2,690 / 167 payers), decomposition sums, guardrails, code-safety validator, a stubbed LLM call (tool use parsing, invented numbers flagged, retry with error message), CLI smoke tests.
+22 offline tests: control numbers equal to the lab 3 dashboard (139,793 new users, 196,318 active, 7,781 payers, $93,749.58 revenue, Germany $2,690 / 167 payers), decomposition sums, guardrails, code-safety validator, stubbed LLM calls for both providers (structured output parsing, invented numbers flagged, retry with error message, provider selection), CLI smoke tests.
 
 ## Technologies
 
-Python 3, pandas, numpy, Anthropic Python SDK (`anthropic`), unittest. Prompts are documented in [prompts.md](prompts.md).
+Python 3, pandas, numpy, Google Gemini REST API (`urllib`, no SDK), optional Anthropic SDK, unittest. Prompts are documented in [prompts.md](prompts.md).

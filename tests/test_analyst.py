@@ -1,4 +1,5 @@
 """Offline tests (no API key needed): python -m unittest discover -s tests -v"""
+import json
 import os
 import sys
 import unittest
@@ -130,6 +131,57 @@ class TestLLMPathWithStub(unittest.TestCase):
         self.assertIn("KeyError", res["attempts"][0]["error"])
         self.assertIn("Error:", stub.calls[1]["messages"][0]["content"])   # the error was fed back to the model
         self.assertEqual(res["final"]["result"], len(T["users"]))
+
+
+class TestGeminiPath(unittest.TestCase):
+    """The Gemini provider is tested with a stubbed HTTP layer (no network, no key)."""
+
+    def _llm(self, payload):
+        llm = LLM(offline=True)
+        llm.provider, llm.model, llm.mode = "gemini", "gemini-test", "llm:gemini/gemini-test"
+        llm.requests = []
+
+        def fake_post(body):
+            llm.requests.append(body)
+            return {"candidates": [{"content": {"parts": [{"text": json.dumps(payload)}]}, "finishReason": "STOP"}]}
+        llm._post_gemini = fake_post
+        return llm
+
+    def test_request_is_structured_and_response_parsed(self):
+        from analyst import explain
+        llm = self._llm({"headline": "Revenue grew 99%", "drivers": ["mobile web 81.5% of the change"], "hypothesis": "h", "confidence": "low", "check": "c"})
+        res = explain.run(T, llm, "revenue", parse_period("2024-04-22:2024-04-28"), parse_period("2024-04-29:2024-05-05"))
+        gc = llm.requests[0]["generationConfig"]
+        self.assertEqual(gc["responseMimeType"], "application/json")
+        self.assertEqual(gc["temperature"], 0)
+        self.assertIn("headline", gc["responseSchema"]["properties"])
+        self.assertIn("99%", res["explanation"]["unverified_numbers"])
+        self.assertNotIn("81.5%", res["explanation"]["unverified_numbers"])
+
+    def test_schema_conversion_drops_unsupported_keys(self):
+        from analyst.llm import to_gemini_schema
+        self.assertEqual(to_gemini_schema({"type": "object", "additionalProperties": False, "properties": {"a": {"type": "string", "default": "x"}}}),
+                         {"type": "object", "properties": {"a": {"type": "string"}}})
+
+    def test_bad_json_raises_llm_error(self):
+        from analyst.llm import LLMError
+        llm = self._llm({})
+        llm._post_gemini = lambda body: {"candidates": [{"content": {"parts": [{"text": "not json"}]}, "finishReason": "MAX_TOKENS"}]}
+        with self.assertRaises(LLMError):
+            llm.structured("s", "u", {"type": "object"}, "t", lambda: {})
+
+    def test_provider_auto_selection(self):
+        old = {k: os.environ.pop(k, None) for k in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY")}
+        try:
+            self.assertEqual(LLM().provider, "offline")
+            os.environ["GEMINI_API_KEY"] = "x"
+            self.assertEqual(LLM().provider, "gemini")
+            self.assertEqual(LLM(offline=True).provider, "offline")
+        finally:
+            for k, v in old.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v
 
 
 class TestCLI(unittest.TestCase):
